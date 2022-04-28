@@ -1088,7 +1088,7 @@ func (sd *ScaleDown) scheduleDeleteEmptyNodes(emptyNodes []*apiv1.Node, client k
 				return
 			}
 			deleteErr = deleteNodeFromCloudProvider(nodeToDelete, sd.context.CloudProvider,
-				sd.context.Recorder, sd.clusterStateRegistry)
+				sd.context.Recorder, sd.clusterStateRegistry, sd.context.AutoscalingOptions.SleepTimeBeforeTerminate)
 			if deleteErr != nil {
 				klog.Errorf("Problem with empty node deletion: %v", deleteErr)
 				result = status.NodeDeleteResult{ResultType: status.NodeDeleteErrorFailedToDelete, Err: deleteErr}
@@ -1145,7 +1145,7 @@ func (sd *ScaleDown) deleteNode(node *apiv1.Node, pods []*apiv1.Pod,
 
 	// attempt delete from cloud provider
 
-	if typedErr := deleteNodeFromCloudProvider(node, sd.context.CloudProvider, sd.context.Recorder, sd.clusterStateRegistry); typedErr != nil {
+	if typedErr := deleteNodeFromCloudProvider(node, sd.context.CloudProvider, sd.context.Recorder, sd.clusterStateRegistry, sd.context.AutoscalingOptions.SleepTimeBeforeTerminate); typedErr != nil {
 		return status.NodeDeleteResult{ResultType: status.NodeDeleteErrorFailedToDelete, Err: typedErr}
 	}
 
@@ -1269,7 +1269,9 @@ func drainNode(node *apiv1.Node, pods []*apiv1.Pod, client kube_client.Interface
 // Removes the given node from cloud provider. No extra pre-deletion actions are executed on
 // the Kubernetes side.
 func deleteNodeFromCloudProvider(node *apiv1.Node, cloudProvider cloudprovider.CloudProvider,
-	recorder kube_record.EventRecorder, registry *clusterstate.ClusterStateRegistry) errors.AutoscalerError {
+	recorder kube_record.EventRecorder, registry *clusterstate.ClusterStateRegistry, sleepTime time.Duration) errors.AutoscalerError {
+    klog.V(0).Infof("Scale-down: sleep %v before CloudProvider remove node %s", sleepTime, node.Name)
+    time.Sleep(sleepTime)
 	nodeGroup, err := cloudProvider.NodeGroupForNode(node)
 	if err != nil {
 		return errors.NewAutoscalerError(

@@ -147,4 +147,6 @@ type AutoscalingOptions struct {
 	ClusterAPICloudConfigAuthoritative bool
 	// Enable or disable cordon nodes functionality before terminating the node during downscale process
 	CordonNodeBeforeTerminate bool
+    // Should CA sleep time(second) before terminating during downscale process
+    SleepTimeBeforeTerminate time.Duration
 }
